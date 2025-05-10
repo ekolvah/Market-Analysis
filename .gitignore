@@ -43,4 +43,12 @@ market_analysis.log
 .env.*.local
 
 # Jupyter Notebook
-.ipynb_checkpoints 
+.ipynb_checkpoints
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+data/*.db
+data/*.sqlite
+data/*.sqlite3 

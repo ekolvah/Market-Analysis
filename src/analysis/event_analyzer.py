@@ -2,11 +2,16 @@ from datetime import datetime, timedelta
 from typing import List
 import pandas as pd
 from src.models.price_event import Event, PriceEventCorrelation
+from src.database.db_manager import DatabaseManager
+from sqlalchemy.orm import Session
+from src.models.database import PriceChange
+from loguru import logger
 
 class EventAnalyzer:
     """Класс для анализа причин изменения цены биткоина"""
     
-    def __init__(self, events_data: pd.DataFrame, price_change_date: datetime, price_change_percent: float):
+    def __init__(self, events_data: pd.DataFrame, price_change_date: datetime, 
+                 price_change_percent: float, db_manager: DatabaseManager):
         """
         Инициализация анализатора событий
         
@@ -14,10 +19,12 @@ class EventAnalyzer:
             events_data: DataFrame с данными о событиях
             price_change_date: Дата изменения цены
             price_change_percent: Процентное изменение цены
+            db_manager: Менеджер базы данных
         """
         self.events_data = events_data
         self.price_change_date = price_change_date
         self.price_change_percent = price_change_percent
+        self.db_manager = db_manager
         
     def find_relevant_events(self, window_hours: int = 24) -> List[Event]:
         """
@@ -98,4 +105,22 @@ class EventAnalyzer:
         
         # Сортируем по убыванию влияния
         causes.sort(key=lambda x: x.impact_score, reverse=True)
+        
+        # Сохраняем результаты в базу данных
+        try:
+            # Создаем объект PriceChange для сохранения
+            price_change = PriceChange(
+                timestamp=self.price_change_date,
+                price_before=0.0,  # Эти значения нужно получать из реальных данных
+                price_after=0.0,   # Эти значения нужно получать из реальных данных
+                percentage_change=self.price_change_percent
+            )
+            
+            # Сохраняем результаты
+            self.db_manager.save_analysis_results(price_change, causes)
+            
+        except Exception as e:
+            logger.error(f"Ошибка при сохранении результатов анализа: {str(e)}")
+            # Продолжаем выполнение, даже если сохранение не удалось
+        
         return causes 

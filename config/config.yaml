@@ -3,6 +3,10 @@ analysis:
   price_change_threshold: 5.0  # Процентное изменение цены для определения значимого изменения
   analysis_window_days: 7      # Количество дней до и после целевой даты для анализа
 
+database:
+  type: "sqlite"
+  path: "data/market_analysis.db"  # Путь к файлу базы данных
+
 logging:
   level: "INFO"
   format: "{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}"
