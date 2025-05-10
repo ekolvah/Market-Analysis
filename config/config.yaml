@@ -10,4 +10,10 @@ database:
 logging:
   level: "INFO"
   format: "{time:YYYY-MM-DD HH:mm:ss} | {level} | {message}"
-  file: "market_analysis.log" 
+  file: "market_analysis.log"
+
+news_collector:
+  sources:
+    cryptocompare:
+      enabled: true
+ 

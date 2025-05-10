@@ -1,41 +1,75 @@
 import pandas as pd
-from datetime import datetime
+from datetime import datetime, timedelta
 from sqlalchemy.orm import Session
+import yaml
+from loguru import logger
+
 from src.analysis.event_analyzer import EventAnalyzer
+from src.analysis.news_collector import NewsCollector
 from src.database.init_db import init_database
 from src.database.db_manager import DatabaseManager
 
+def collect_news_for_period(start_date: datetime, end_date: datetime, config: dict) -> pd.DataFrame:
+    """
+    Сбор новостей за указанный период
+    
+    Args:
+        start_date: Начальная дата периода
+        end_date: Конечная дата периода
+        config: Конфигурация приложения
+        
+    Returns:
+        pd.DataFrame: DataFrame с новостями
+    """
+    try:
+        collector = NewsCollector(config)
+        events = collector.collect_news(start_date, end_date)
+        
+        if not events:
+            logger.warning(f"Не удалось собрать новости за период {start_date} - {end_date}")
+            return pd.DataFrame()
+        
+        # Преобразуем события в DataFrame
+        events_data = pd.DataFrame({
+            'timestamp': [event.timestamp for event in events],
+            'event_type': [event.event_type for event in events],
+            'source': [event.source for event in events],
+            'description': [event.description for event in events],
+            'sentiment_score': [event.sentiment_score for event in events]
+        })
+        
+        logger.info(f"Успешно собрано {len(events_data)} новостей")
+        return events_data
+        
+    except Exception as e:
+        logger.error(f"Ошибка при сборе новостей: {str(e)}")
+        return pd.DataFrame()
+
 def main():
+    # Загружаем конфигурацию
+    try:
+        with open('config/config.yaml', 'r', encoding='utf-8') as f:
+            config = yaml.safe_load(f)
+    except Exception as e:
+        logger.error(f"Ошибка при чтении конфигурации: {str(e)}")
+        return
+    
     # Инициализация базы данных
     engine, Session = init_database()
     session = Session()
     db_manager = DatabaseManager(session)
     
     try:
-        # Известное изменение цены 4 ноября 2024 года
-        price_change_date = datetime(2024, 11, 4, 12, 0)  # Предположим, что изменение произошло в полдень
-        price_change_percent = 15.0  # Предположим, что цена выросла на 15%
+        # Используем текущую дату и последние 7 дней
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=7)
         
-        # Пример данных о событиях
-        events_data = pd.DataFrame({
-            'timestamp': [
-                datetime(2024, 11, 4, 10, 0),  # Запуск нового ETF
-                datetime(2024, 11, 4, 14, 0),  # Крупная покупка
-                datetime(2024, 11, 4, 18, 0),  # Новости о регулировании
-                datetime(2024, 11, 3, 20, 0),  # Предыдущие новости о ETF
-                datetime(2024, 11, 4, 9, 0)    # Ранние новости о рынке
-            ],
-            'event_type': ['ETF', 'TRADE', 'REGULATION', 'ETF', 'MARKET'],
-            'source': ['Bloomberg', 'Binance', 'Reuters', 'CNBC', 'CoinDesk'],
-            'description': [
-                'Запуск нового Bitcoin ETF',
-                'Крупная покупка биткоина на сумму $500M',
-                'Новые правила регулирования криптовалют',
-                'Подготовка к запуску Bitcoin ETF',
-                'Рост интереса институциональных инвесторов'
-            ],
-            'sentiment_score': [0.8, 0.6, -0.3, 0.7, 0.5]
-        })
+        # Для примера берем изменение цены за последние 24 часа
+        price_change_date = end_date
+        price_change_percent = 5.0  # Примерное изменение цены
+        
+        logger.info(f"Собираем новости за период с {start_date} по {end_date}")
+        events_data = collect_news_for_period(start_date, end_date, config)
         
         # Инициализация анализатора
         analyzer = EventAnalyzer(events_data, price_change_date, price_change_percent, db_manager)
@@ -59,6 +93,8 @@ def main():
             print(f"Влияние: {cause.impact_score:.2f}")
             print(f"Уверенность: {cause.confidence_level:.2f}")
             
+    except Exception as e:
+        logger.error(f"Ошибка при выполнении анализа: {str(e)}")
     finally:
         session.close()
 
