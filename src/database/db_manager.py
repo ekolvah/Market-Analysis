@@ -71,26 +71,58 @@ class DatabaseManager:
             logger.error(f"Ошибка при сохранении корреляции: {str(e)}")
             raise
     
+    def get_price_change_by_unique(self, timestamp: datetime, percentage_change: float) -> Optional[PriceChange]:
+        """Поиск изменения цены по дате и проценту изменения (для примера этого достаточно)"""
+        return self.session.query(PriceChange).filter_by(
+            timestamp=timestamp,
+            percentage_change=percentage_change
+        ).first()
+
+    def get_event_by_unique(self, event: EventModel) -> Optional[Event]:
+        """Поиск события по уникальным полям (timestamp, event_type, source, description)"""
+        return self.session.query(Event).filter_by(
+            timestamp=event.timestamp,
+            event_type=event.event_type,
+            source=event.source,
+            description=event.description
+        ).first()
+
+    def get_correlation_by_unique(self, event_id: int, price_change_id: int) -> Optional[EventPriceCorrelation]:
+        """Поиск корреляции по связке event_id + price_change_id"""
+        return self.session.query(EventPriceCorrelation).filter_by(
+            event_id=event_id,
+            price_change_id=price_change_id
+        ).first()
+
     def save_analysis_results(self, price_change: PriceChange, 
                             correlations: List[PriceEventCorrelationModel]) -> None:
-        """Сохранение всех результатов анализа"""
+        """Сохранение всех результатов анализа без дублирования"""
         try:
-            # Сохраняем изменение цены
-            db_price_change = self.save_price_change(
+            # Проверяем, есть ли уже такое изменение цены
+            db_price_change = self.get_price_change_by_unique(
                 timestamp=price_change.timestamp,
-                price_before=price_change.price_before,
-                price_after=price_change.price_after,
-                percentage_change=price_change.percentage_change,
-                volume=price_change.volume
+                percentage_change=price_change.percentage_change
             )
-            
-            # Сохраняем события и их корреляции
+            if not db_price_change:
+                db_price_change = self.save_price_change(
+                    timestamp=price_change.timestamp,
+                    price_before=price_change.price_before,
+                    price_after=price_change.price_after,
+                    percentage_change=price_change.percentage_change,
+                    volume=price_change.volume
+                )
+
             for correlation in correlations:
-                db_event = self.save_event(correlation.event)
-                self.save_correlation(correlation, db_event, db_price_change)
-                
-            logger.info("Все результаты анализа успешно сохранены")
-            
+                # Проверяем, есть ли уже такое событие
+                db_event = self.get_event_by_unique(correlation.event)
+                if not db_event:
+                    db_event = self.save_event(correlation.event)
+                # Проверяем, есть ли уже такая корреляция
+                db_correlation = self.get_correlation_by_unique(db_event.id, db_price_change.id)
+                if not db_correlation:
+                    self.save_correlation(correlation, db_event, db_price_change)
+
+            logger.info("Все результаты анализа успешно сохранены (без дублирования)")
         except Exception as e:
             self.session.rollback()
             logger.error(f"Ошибка при сохранении результатов анализа: {str(e)}")

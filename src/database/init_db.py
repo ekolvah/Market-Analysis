@@ -2,7 +2,7 @@ import os
 import sys
 from pathlib import Path
 import yaml
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 from loguru import logger
 
@@ -19,7 +19,7 @@ def load_config():
         return yaml.safe_load(f)
 
 def init_database():
-    """Инициализация базы данных"""
+    """Инициализация базы данных - создание новой чистой базы"""
     try:
         # Загружаем конфигурацию
         config = load_config()
@@ -37,7 +37,12 @@ def init_database():
             echo=False  # Отключаем вывод SQL-запросов
         )
         
-        # Создаем все таблицы
+        # Удаляем все существующие таблицы
+        logger.info("Удаление существующих таблиц...")
+        Base.metadata.drop_all(engine)
+        logger.info("Таблицы успешно удалены")
+        
+        # Создаем все таблицы заново
         logger.info("Создание таблиц в базе данных...")
         Base.metadata.create_all(engine)
         logger.info("Таблицы успешно созданы")
@@ -59,7 +64,7 @@ def main():
         
         # Проверяем подключение
         with Session() as session:
-            session.execute("SELECT 1")
+            session.execute(text("SELECT 1"))
             logger.info("Подключение к базе данных успешно проверено")
             
     except Exception as e:
