@@ -74,20 +74,9 @@ def main():
         # Инициализация анализатора
         analyzer = EventAnalyzer(events_data, price_change_date, price_change_percent, db_manager)
         
-        # Поиск релевантных событий
-        events = analyzer.find_relevant_events(window_hours=24)
+        # Полный анализ (поиск событий, анализ, сохранение, вывод)
+        analyzer.analyze_causes(window_hours=24)
         
-        # Анализ причин изменения цены
-        causes = analyzer.analyze_causes(events)
-        
-        # Вывод результатов
-        logger.info(f"\nАнализ причин изменения цены биткоина {price_change_date.strftime('%Y-%m-%d %H:%M')}")
-        logger.info(f"Изменение цены: {price_change_percent:+.1f}%")
-        logger.info("\nВозможные причины (отсортированы по влиянию):")
-        
-        for cause in causes:
-            cause.log_details()
-            
     except Exception as e:
         logger.error(f"Ошибка при выполнении анализа: {str(e)}")
     finally:

@@ -138,7 +138,7 @@ class NewsCollector:
                             event_type=EVENT_TYPES['NEWS'],
                             source='cryptocompare',
                             description=item['title'],
-                            sentiment_score=None  # TODO: Добавить анализ тональности
+                            sentiment_score=None
                         )
                         events.append(event)
                         logger.debug(f"Added news: {item['title']} ({news_time})")
