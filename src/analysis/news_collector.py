@@ -7,6 +7,7 @@ import requests
 import pandas as pd
 
 from ..models.price_event import Event
+from ..database.db_manager import DatabaseManager
 
 # Константы для типов событий
 EVENT_TYPES = {
@@ -26,14 +27,16 @@ class NewsSource:
 class NewsCollector:
     """Класс для сбора новостей из различных источников"""
     
-    def __init__(self, config: Dict):
+    def __init__(self, config: Dict, db_manager: DatabaseManager):
         """
         Инициализация сборщика новостей
         
         Args:
             config: Конфигурация с настройками источников и API ключами
+            db_manager: Менеджер базы данных для сохранения событий
         """
         self.config = config
+        self.db_manager = db_manager
         self.sources: List[NewsSource] = []
         self._init_sources()
         
@@ -53,35 +56,39 @@ class NewsCollector:
         
         logger.info(f"Initialized {len(self.sources)} news sources")
     
-    def collect_news(self, start_date: datetime, end_date: datetime) -> List[Event]:
+    def collect_news(self, start_date: datetime, end_date: datetime) -> None:
         """
-        Сбор новостей за указанный период
+        Сбор новостей за указанный период и сохранение их в базу данных
         
         Args:
             start_date: Начальная дата периода
             end_date: Конечная дата периода
-            
-        Returns:
-            List[Event]: Список событий
         """
         logger.info(f"Начало сбора новостей за период {start_date} - {end_date}")
-        events = []
+        total_events = 0
         
         for source in self.sources:
             try:
                 logger.debug(f"Сбор новостей из источника {source.name}")
                 source_events = self._collect_from_source(source, start_date, end_date)
-                events.extend(source_events)
-                logger.info(f"Собрано {len(source_events)} новостей из {source.name}")
+                
+                # Сохраняем каждое событие в базу данных
+                for event in source_events:
+                    try:
+                        self.db_manager.save_event(event)
+                        total_events += 1
+                    except Exception as e:
+                        logger.error(f"Ошибка при сохранении события в БД: {str(e)}")
+                        continue
+                        
+                logger.info(f"Собрано и сохранено {len(source_events)} новостей из {source.name}")
             except Exception as e:
                 logger.error(f"Ошибка при сборе новостей из {source.name}: {str(e)}")
         
-        if not events:
+        if total_events == 0:
             logger.warning(f"Не удалось собрать новости за период {start_date} - {end_date}")
-            return []
-            
-        logger.info(f"Всего собрано {len(events)} новостей из всех источников")
-        return events
+        else:
+            logger.info(f"Всего собрано и сохранено {total_events} новостей из всех источников")
     
     def _collect_from_source(self, source: NewsSource, 
                            start_date: datetime, 

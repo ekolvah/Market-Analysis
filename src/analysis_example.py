@@ -32,14 +32,12 @@ def main():
         price_change_date = end_date
         price_change_percent = 5.0  # Примерное изменение цены
         
-        # Сбор новостей
-        collector = NewsCollector(config)
-        events = collector.collect_news(start_date, end_date)
+        # Сбор новостей и сохранение в базу данных
+        collector = NewsCollector(config, db_manager)
+        collector.collect_news(start_date, end_date)
         
-        # Инициализация анализатора
-        analyzer = EventAnalyzer(events, price_change_date, price_change_percent, db_manager)
-        
-        # Полный анализ (поиск событий, анализ, сохранение, вывод)
+        # Инициализация анализатора и проведение анализа
+        analyzer = EventAnalyzer(price_change_date, price_change_percent, db_manager)
         analyzer.analyze_causes(window_hours=24)
         
     except Exception as e:

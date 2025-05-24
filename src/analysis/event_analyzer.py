@@ -11,25 +11,23 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 class EventAnalyzer:
     """Класс для анализа причин изменения цены биткоина"""
     
-    def __init__(self, events: List[Event], price_change_date: datetime, 
+    def __init__(self, price_change_date: datetime, 
                  price_change_percent: float, db_manager: DatabaseManager):
         """
         Инициализация анализатора событий
         
         Args:
-            events: Список событий для анализа
             price_change_date: Дата изменения цены
             price_change_percent: Процентное изменение цены
             db_manager: Менеджер базы данных
         """
-        self.events = events
         self.price_change_date = price_change_date
         self.price_change_percent = price_change_percent
         self.db_manager = db_manager
         
     def find_relevant_events(self, window_hours: int = 24) -> List[Event]:
         """
-        Поиск событий, которые могли повлиять на изменение цены
+        Поиск событий из базы данных, которые могли повлиять на изменение цены
         
         Args:
             window_hours: Временное окно в часах для поиска событий
@@ -38,15 +36,17 @@ class EventAnalyzer:
             Список релевантных событий
         """
         start_time = self.price_change_date - timedelta(hours=window_hours)
-        end_time = self.price_change_date + timedelta(hours=window_hours)
+        end_time = self.price_change_date 
         
-        # Фильтруем события по временному окну
-        relevant_events = [
-            event for event in self.events 
-            if start_time <= event.timestamp <= end_time
-        ]
+        # Получаем события из базы данных за указанный период
+        events = self.db_manager.get_events_in_period(start_time, end_time)
+        
+        if not events:
+            logger.info(f"Не найдено событий в период {start_time} - {end_time}")
+            return []
             
-        return relevant_events
+        logger.info(f"Найдено {len(events)} релевантных событий за период {start_time.strftime('%Y-%m-%d %H:%M')} - {end_time.strftime('%Y-%m-%d %H:%M')}")
+        return events
     
     def analyze_sentiments(self, events: List[Event]) -> List[Event]:
         """Анализирует тональность для каждого события, если не задана."""

@@ -126,3 +126,26 @@ class DatabaseManager:
             self.session.rollback()
             logger.error(f"Ошибка при сохранении результатов анализа: {str(e)}")
             raise
+
+    def get_events_in_period(self, start_time: datetime, end_time: datetime) -> List[Event]:
+        """
+        Получение событий из базы данных за указанный период
+        
+        Args:
+            start_time: Начальное время периода
+            end_time: Конечное время периода
+            
+        Returns:
+            List[Event]: Список событий за указанный период
+        """
+        try:
+            events = self.session.query(Event).filter(
+                Event.timestamp >= start_time,
+                Event.timestamp <= end_time
+            ).order_by(Event.timestamp).all()
+            
+            logger.info(f"Получено {len(events)} событий из БД за период {start_time} - {end_time}")
+            return events
+        except Exception as e:
+            logger.error(f"Ошибка при получении событий из БД: {str(e)}")
+            return []
