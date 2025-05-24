@@ -49,7 +49,6 @@ class EventPriceCorrelation(Base):
     event_id = Column(Integer, ForeignKey('events.id'), nullable=False)
     price_change_id = Column(Integer, ForeignKey('price_changes.id'), nullable=False)
     impact_score = Column(Float, nullable=False)
-    confidence_level = Column(Float, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Связи с другими таблицами
@@ -57,4 +56,4 @@ class EventPriceCorrelation(Base):
     price_change = relationship("PriceChange", back_populates="correlations")
 
     def __repr__(self):
-        return f"<EventPriceCorrelation(id={self.id}, impact={self.impact_score}, confidence={self.confidence_level})>" 
+        return f"<EventPriceCorrelation(id={self.id}, impact={self.impact_score})>" 

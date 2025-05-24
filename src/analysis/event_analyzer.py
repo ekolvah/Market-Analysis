@@ -92,14 +92,13 @@ class EventAnalyzer:
             elif event.event_type == 'REGULATION':
                 event_type_factor = 1.2  # Регуляторные события также важны
             
-            # Итоговая оценка влияния
-            impact_score = time_factor * sentiment_factor * event_type_factor
-            confidence_level = min(1.0, impact_score * 2)  # преобразуем в уровень уверенности
+            # Итоговая оценка влияния события (нормализованная от 0 до 1)
+            # Учитывает временную близость, соответствие настроения и важность типа события
+            impact_score = min(1.0, time_factor * sentiment_factor * event_type_factor)
             
             cause = PriceEventCorrelation(
                 event=event,
-                impact_score=impact_score,
-                confidence_level=confidence_level
+                impact_score=impact_score
             )
             causes.append(cause)
         

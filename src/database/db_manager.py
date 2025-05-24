@@ -59,12 +59,11 @@ class DatabaseManager:
             db_correlation = EventPriceCorrelation(
                 event_id=db_event.id,
                 price_change_id=db_price_change.id,
-                impact_score=correlation.impact_score,
-                confidence_level=correlation.confidence_level
+                impact_score=correlation.impact_score
             )
             self.session.add(db_correlation)
             self.session.commit()
-            logger.info(f"Сохранена корреляция: impact={correlation.impact_score:.2f}, confidence={correlation.confidence_level:.2f}")
+            logger.info(f"Сохранена корреляция: impact={correlation.impact_score:.2f}")
             return db_correlation
         except Exception as e:
             self.session.rollback()
