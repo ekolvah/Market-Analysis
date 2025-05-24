@@ -11,18 +11,18 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 class EventAnalyzer:
     """Класс для анализа причин изменения цены биткоина"""
     
-    def __init__(self, events_data: pd.DataFrame, price_change_date: datetime, 
+    def __init__(self, events: List[Event], price_change_date: datetime, 
                  price_change_percent: float, db_manager: DatabaseManager):
         """
         Инициализация анализатора событий
         
         Args:
-            events_data: DataFrame с данными о событиях
+            events: Список событий для анализа
             price_change_date: Дата изменения цены
             price_change_percent: Процентное изменение цены
             db_manager: Менеджер базы данных
         """
-        self.events_data = events_data
+        self.events = events
         self.price_change_date = price_change_date
         self.price_change_percent = price_change_percent
         self.db_manager = db_manager
@@ -41,22 +41,12 @@ class EventAnalyzer:
         end_time = self.price_change_date + timedelta(hours=window_hours)
         
         # Фильтруем события по временному окну
-        mask = (self.events_data['timestamp'] >= start_time) & (self.events_data['timestamp'] <= end_time)
-        relevant_events = self.events_data[mask].copy()
-        
-        # Преобразуем в список объектов Event
-        events = []
-        for _, row in relevant_events.iterrows():
-            event = Event(
-                timestamp=row['timestamp'],
-                event_type=row['event_type'],
-                source=row['source'],
-                description=row['description'],
-                sentiment_score=row.get('sentiment_score')
-            )
-            events.append(event)
+        relevant_events = [
+            event for event in self.events 
+            if start_time <= event.timestamp <= end_time
+        ]
             
-        return events
+        return relevant_events
     
     def analyze_sentiments(self, events: List[Event]) -> List[Event]:
         """Анализирует тональность для каждого события, если не задана."""

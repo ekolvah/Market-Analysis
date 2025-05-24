@@ -9,42 +9,6 @@ from src.analysis.news_collector import NewsCollector
 from src.database.init_db import init_database
 from src.database.db_manager import DatabaseManager
 
-def collect_news_for_period(start_date: datetime, end_date: datetime, config: dict) -> pd.DataFrame:
-    """
-    Сбор новостей за указанный период
-    
-    Args:
-        start_date: Начальная дата периода
-        end_date: Конечная дата периода
-        config: Конфигурация приложения
-        
-    Returns:
-        pd.DataFrame: DataFrame с новостями
-    """
-    try:
-        collector = NewsCollector(config)
-        events = collector.collect_news(start_date, end_date)
-        
-        if not events:
-            logger.warning(f"Не удалось собрать новости за период {start_date} - {end_date}")
-            return pd.DataFrame()
-        
-        # Преобразуем события в DataFrame
-        events_data = pd.DataFrame({
-            'timestamp': [event.timestamp for event in events],
-            'event_type': [event.event_type for event in events],
-            'source': [event.source for event in events],
-            'description': [event.description for event in events],
-            'sentiment_score': [event.sentiment_score for event in events]
-        })
-        
-        logger.info(f"Успешно собрано {len(events_data)} новостей")
-        return events_data
-        
-    except Exception as e:
-        logger.error(f"Ошибка при сборе новостей: {str(e)}")
-        return pd.DataFrame()
-
 def main():
     # Загружаем конфигурацию
     try:
@@ -68,11 +32,12 @@ def main():
         price_change_date = end_date
         price_change_percent = 5.0  # Примерное изменение цены
         
-        logger.info(f"Собираем новости за период с {start_date} по {end_date}")
-        events_data = collect_news_for_period(start_date, end_date, config)
+        # Сбор новостей
+        collector = NewsCollector(config)
+        events = collector.collect_news(start_date, end_date)
         
         # Инициализация анализатора
-        analyzer = EventAnalyzer(events_data, price_change_date, price_change_percent, db_manager)
+        analyzer = EventAnalyzer(events, price_change_date, price_change_percent, db_manager)
         
         # Полный анализ (поиск событий, анализ, сохранение, вывод)
         analyzer.analyze_causes(window_hours=24)

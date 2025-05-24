@@ -4,6 +4,7 @@ from loguru import logger
 from dataclasses import dataclass
 import cryptocompare
 import requests
+import pandas as pd
 
 from ..models.price_event import Event
 
@@ -61,16 +62,25 @@ class NewsCollector:
             end_date: Конечная дата периода
             
         Returns:
-            List[Event]: Список событий, созданных из новостей
+            List[Event]: Список событий
         """
+        logger.info(f"Начало сбора новостей за период {start_date} - {end_date}")
         events = []
+        
         for source in self.sources:
             try:
+                logger.debug(f"Сбор новостей из источника {source.name}")
                 source_events = self._collect_from_source(source, start_date, end_date)
                 events.extend(source_events)
+                logger.info(f"Собрано {len(source_events)} новостей из {source.name}")
             except Exception as e:
-                logger.error(f"Error collecting news from {source.name}: {str(e)}")
-                
+                logger.error(f"Ошибка при сборе новостей из {source.name}: {str(e)}")
+        
+        if not events:
+            logger.warning(f"Не удалось собрать новости за период {start_date} - {end_date}")
+            return []
+            
+        logger.info(f"Всего собрано {len(events)} новостей из всех источников")
         return events
     
     def _collect_from_source(self, source: NewsSource, 
