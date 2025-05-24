@@ -127,24 +127,3 @@ class DatabaseManager:
             self.session.rollback()
             logger.error(f"Ошибка при сохранении результатов анализа: {str(e)}")
             raise
-    
-    def get_price_changes(self, start_date: datetime, end_date: datetime) -> List[PriceChange]:
-        """Получение изменений цены за период"""
-        return self.session.query(PriceChange)\
-            .filter(PriceChange.timestamp.between(start_date, end_date))\
-            .order_by(PriceChange.timestamp.desc())\
-            .all()
-    
-    def get_events(self, start_date: datetime, end_date: datetime) -> List[Event]:
-        """Получение событий за период"""
-        return self.session.query(Event)\
-            .filter(Event.timestamp.between(start_date, end_date))\
-            .order_by(Event.timestamp.desc())\
-            .all()
-    
-    def get_correlations(self, price_change_id: int) -> List[EventPriceCorrelation]:
-        """Получение корреляций для конкретного изменения цены"""
-        return self.session.query(EventPriceCorrelation)\
-            .filter(EventPriceCorrelation.price_change_id == price_change_id)\
-            .order_by(EventPriceCorrelation.impact_score.desc())\
-            .all() 
