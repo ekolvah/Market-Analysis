@@ -81,17 +81,12 @@ def main():
         causes = analyzer.analyze_causes(events)
         
         # Вывод результатов
-        print(f"\nАнализ причин изменения цены биткоина {price_change_date.strftime('%Y-%m-%d %H:%M')}")
-        print(f"Изменение цены: {price_change_percent:+.1f}%")
-        print("\nВозможные причины (отсортированы по влиянию):")
+        logger.info(f"\nАнализ причин изменения цены биткоина {price_change_date.strftime('%Y-%m-%d %H:%M')}")
+        logger.info(f"Изменение цены: {price_change_percent:+.1f}%")
+        logger.info("\nВозможные причины (отсортированы по влиянию):")
         
         for cause in causes:
-            print(f"\nСобытие: {cause.event.description}")
-            print(f"Тип: {cause.event.event_type}")
-            print(f"Источник: {cause.event.source}")
-            print(f"Время: {cause.event.timestamp.strftime('%Y-%m-%d %H:%M')}")
-            print(f"Влияние: {cause.impact_score:.2f}")
-            print(f"Уверенность: {cause.confidence_level:.2f}")
+            cause.log_details()
             
     except Exception as e:
         logger.error(f"Ошибка при выполнении анализа: {str(e)}")
