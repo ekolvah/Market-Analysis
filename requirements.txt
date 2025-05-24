@@ -6,4 +6,5 @@ loguru==0.7.2
 pyarrow==20.0.0
 sqlalchemy==2.0.27
 cryptocompare==0.7.0
-requests==2.32.3 
+requests==2.32.3
+ccxt==4.1.13 
