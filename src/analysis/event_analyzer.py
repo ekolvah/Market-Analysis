@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta
-from typing import List
+from typing import List, Optional
 import pandas as pd
 from src.models.price_event import Event, PriceEventCorrelation
 from src.database.db_manager import DatabaseManager
@@ -25,16 +25,26 @@ class EventAnalyzer:
         self.price_change_percent = price_change_percent
         self.db_manager = db_manager
         
-    def find_relevant_events(self, window_hours: int = 24) -> List[Event]:
+    def find_relevant_events(self, window_hours: Optional[int] = None) -> List[Event]:
         """
         Поиск событий из базы данных, которые могли повлиять на изменение цены
         
         Args:
-            window_hours: Временное окно в часах для поиска событий
+            window_hours: Временное окно в часах для поиска событий. Если None, 
+                         возвращаются все события из базы данных
             
         Returns:
             Список релевантных событий
         """
+        if window_hours is None:
+            # Получаем все события из базы данных
+            events = self.db_manager.get_all_events()
+            if not events:
+                logger.info("В базе данных нет событий")
+                return []
+            logger.info(f"Получены все события из базы данных, всего: {len(events)}")
+            return events
+            
         start_time = self.price_change_date - timedelta(hours=window_hours)
         end_time = self.price_change_date 
         
@@ -103,19 +113,26 @@ class EventAnalyzer:
         except Exception as e:
             logger.error(f"Ошибка при сохранении результатов анализа: {str(e)}")
 
-    def analyze_causes(self, window_hours: int = 24) -> None:
+    def analyze_causes(self, window_hours: Optional[int] = None) -> None:
         """
         Полный анализ: поиск релевантных событий, анализ тональности и влияния, сохранение и вывод результатов.
+        
+        Args:
+            window_hours: Временное окно в часах для поиска событий. Если None, 
+                         анализируются все события из базы данных
         """
         # 1. Поиск релевантных событий
         events = self.find_relevant_events(window_hours=window_hours)
         if not events:
             logger.info("Релевантные события не найдены.")
             return
+            
         # 2. Анализ тональности
         events_with_sentiment = self.analyze_sentiments(events)
+        
         # 3. Анализ влияния
         correlations = self.analyze_influences(events_with_sentiment)
+        
         # 4. Сохранение результатов
         price_change = PriceChange(
             timestamp=self.price_change_date,
@@ -124,6 +141,7 @@ class EventAnalyzer:
             percentage_change=self.price_change_percent
         )
         self.save_analysis_results(price_change, correlations)
+        
         # 5. Вывод результатов
         logger.info(f"\nАнализ причин изменения цены биткоина {self.price_change_date.strftime('%Y-%m-%d %H:%M')}")
         logger.info(f"Изменение цены: {self.price_change_percent:+.1f}%")

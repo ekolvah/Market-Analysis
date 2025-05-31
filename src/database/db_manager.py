@@ -149,3 +149,18 @@ class DatabaseManager:
         except Exception as e:
             logger.error(f"Ошибка при получении событий из БД: {str(e)}")
             return []
+
+    def get_all_events(self) -> List[Event]:
+        """
+        Получение всех событий из базы данных
+        
+        Returns:
+            List[Event]: Список всех событий, отсортированных по времени
+        """
+        try:
+            events = self.session.query(Event).order_by(Event.timestamp).all()
+            logger.info(f"Получено {len(events)} событий из БД")
+            return events
+        except Exception as e:
+            logger.error(f"Ошибка при получении всех событий из БД: {str(e)}")
+            return []

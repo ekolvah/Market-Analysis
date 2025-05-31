@@ -112,43 +112,30 @@ class NewsCollector:
                                   start_date: datetime,
                                   end_date: datetime) -> List[Event]:
         """
-        Сбор новостей из CryptoCompare
-        
-        Args:
-            source: Источник новостей
-            start_date: Начальная дата периода
-            end_date: Конечная дата периода
-            
-        Returns:
-            List[Event]: Список событий из CryptoCompare
+        Сбор новостей из CryptoCompare только с первой страницы (без пагинации)
         """
+        #TODO реализовать сбор всех новостей за указанный период
         try:
             # Проверяем валидность дат
             if end_date < start_date:
                 logger.error(f"Invalid date range: end_date {end_date} is before start_date {start_date}")
                 return []
-                
-            # Получаем новости через API
-            url = "https://min-api.cryptocompare.com/data/v2/news/?lang=EN"
+
+            events = []
+            url = f"https://min-api.cryptocompare.com/data/v2/news/?lang=EN&page=0"
             response = requests.get(url)
             response.raise_for_status()
             news_data = response.json()
-            
+
             if not isinstance(news_data, dict):
                 raise Exception(f"Invalid response format: {type(news_data)}")
-            
+
             if 'Data' not in news_data:
                 raise Exception(f"Missing 'Data' field in response: {news_data}")
-            
-            events = []
-            logger.info(f"Processing news from {start_date} to {end_date}")
-            
+
             for item in news_data['Data']:
                 try:
-                    # Преобразуем timestamp из Unix в datetime
                     news_time = datetime.fromtimestamp(item['published_on'])
-                    
-                    # Проверяем, что новость входит в нужный период
                     if start_date <= news_time <= end_date:
                         event = Event(
                             timestamp=news_time,
@@ -161,17 +148,16 @@ class NewsCollector:
                         logger.debug(f"Added news: {item['title']} ({news_time})")
                     else:
                         logger.debug(f"Skipped news outside period: {item['title']} ({news_time})")
-                        
                 except KeyError as e:
                     logger.warning(f"Missing required field in news item: {e}")
                     continue
                 except Exception as e:
                     logger.warning(f"Error processing news item: {e}")
                     continue
-            
+
             logger.info(f"Collected {len(events)} news from CryptoCompare for period {start_date} to {end_date}")
             return events
-            
+
         except requests.exceptions.RequestException as e:
             logger.error(f"Network error while collecting news from CryptoCompare: {str(e)}")
             return []

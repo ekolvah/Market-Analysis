@@ -47,7 +47,7 @@ def main():
                 last_price_change.percentage_change,
                 db_manager
             )
-            analyzer.analyze_causes(window_hours=24)
+            analyzer.analyze_causes()
         else:
             logger.info("Не обнаружено значительных изменений цены за указанный период")
         
