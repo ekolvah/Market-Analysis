@@ -43,8 +43,7 @@ def main():
             
             # Инициализация анализатора и проведение анализа
             analyzer = EventAnalyzer(
-                last_price_change.timestamp,
-                last_price_change.percentage_change,
+                last_price_change,
                 db_manager
             )
             analyzer.analyze_causes()

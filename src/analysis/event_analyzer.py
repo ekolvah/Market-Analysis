@@ -11,18 +11,15 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 class EventAnalyzer:
     """Класс для анализа причин изменения цены биткоина"""
     
-    def __init__(self, price_change_date: datetime, 
-                 price_change_percent: float, db_manager: DatabaseManager):
+    def __init__(self, price_change: PriceChange, db_manager: DatabaseManager):
         """
         Инициализация анализатора событий
         
         Args:
-            price_change_date: Дата изменения цены
-            price_change_percent: Процентное изменение цены
+            price_change: Объект с информацией об изменении цены
             db_manager: Менеджер базы данных
         """
-        self.price_change_date = price_change_date
-        self.price_change_percent = price_change_percent
+        self.price_change = price_change
         self.db_manager = db_manager
         
     def find_relevant_events(self, window_hours: Optional[int] = None) -> List[Event]:
@@ -45,8 +42,8 @@ class EventAnalyzer:
             logger.info(f"Получены все события из базы данных, всего: {len(events)}")
             return events
             
-        start_time = self.price_change_date - timedelta(hours=window_hours)
-        end_time = self.price_change_date 
+        start_time = self.price_change.timestamp - timedelta(hours=window_hours)
+        end_time = self.price_change.timestamp
         
         # Получаем события из базы данных за указанный период
         events = self.db_manager.get_events_in_period(start_time, end_time)
@@ -80,13 +77,13 @@ class EventAnalyzer:
         causes = []
         for event in events:
             # 1. Временная близость
-            time_diff = abs((self.price_change_date - event.timestamp).total_seconds() / 3600)
+            time_diff = abs((self.price_change.timestamp - event.timestamp).total_seconds() / 3600)
             time_factor = 1.0 / (1.0 + time_diff)
             # 2. Соответствие настроения и направления изменения цены
             sentiment_factor = 1.0
             if event.sentiment_score is not None:
-                if (self.price_change_percent > 0 and event.sentiment_score > 0) or \
-                   (self.price_change_percent < 0 and event.sentiment_score < 0):
+                if (self.price_change.percentage_change > 0 and event.sentiment_score > 0) or \
+                   (self.price_change.percentage_change < 0 and event.sentiment_score < 0):
                     sentiment_factor = abs(event.sentiment_score)
                 else:
                     sentiment_factor = 0.5
@@ -126,7 +123,7 @@ class EventAnalyzer:
         if not events:
             logger.info("Релевантные события не найдены.")
             return
-            
+        #TODO улучшить рассчет влияния событий на изменение цены
         # 2. Анализ тональности
         events_with_sentiment = self.analyze_sentiments(events)
         
@@ -134,17 +131,11 @@ class EventAnalyzer:
         correlations = self.analyze_influences(events_with_sentiment)
         
         # 4. Сохранение результатов
-        price_change = PriceChange(
-            timestamp=self.price_change_date,
-            price_before=0.0,  # TODO: получить из данных
-            price_after=0.0,   # TODO: получить из данных
-            percentage_change=self.price_change_percent
-        )
-        self.save_analysis_results(price_change, correlations)
+        self.save_analysis_results(self.price_change, correlations)
         
         # 5. Вывод результатов
-        logger.info(f"\nАнализ причин изменения цены биткоина {self.price_change_date.strftime('%Y-%m-%d %H:%M')}")
-        logger.info(f"Изменение цены: {self.price_change_percent:+.1f}%")
+        logger.info(f"\nАнализ причин изменения цены биткоина {self.price_change.timestamp.strftime('%Y-%m-%d %H:%M')}")
+        logger.info(f"Изменение цены: {self.price_change.percentage_change:+.1f}%")
         logger.info("\nВозможные причины (отсортированы по влиянию):")
         for cause in correlations:
             cause.log_details() 
